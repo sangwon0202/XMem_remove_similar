@@ -1,6 +1,7 @@
 from inference.memory_manager import MemoryManager
 from model.network import XMem
 from model.aggregate import aggregate
+import torch.nn as nn
 
 from util.tensor_util import pad_divide_by, unpad
 
@@ -18,6 +19,8 @@ class InferenceCore:
 
         self.clear_memory()
         self.all_labels = None
+
+        self.pre_value = None
 
     def clear_memory(self):
         self.curr_ti = -1
@@ -39,7 +42,12 @@ class InferenceCore:
         # self.all_labels = [l.item() for l in all_labels]
         self.all_labels = all_labels
 
+    def cos_sim(A, B):
+        cos = nn.CosineSimilarity(dim = 1)
+        return cos(A,B)[0]
+
     def step(self, image, mask=None, valid_labels=None, end=False):
+
         # image: 3*H*W
         # mask: num_objects*H*W or None
         self.curr_ti += 1
@@ -93,9 +101,15 @@ class InferenceCore:
             self.memory.create_hidden_state(len(self.all_labels), key)
 
         # save as memory if needed
-        if is_mem_frame:
+        if is_mem_frame :
             value, hidden = self.network.encode_value(image, f16, self.memory.get_hidden(), 
                                     pred_prob_with_bg[1:].unsqueeze(0), is_deep_update=is_deep_update)
+            
+            if self.pre_value == None :
+                self.pre_value = value
+            else :
+                print(f"cos_sim: ${self.cos_sim(self.pre_value, value)}")
+
             self.memory.add_memory(key, shrinkage, value, self.all_labels, 
                                     selection=selection if self.enable_long_term else None)
             self.last_mem_ti = self.curr_ti
