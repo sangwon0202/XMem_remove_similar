@@ -5,6 +5,9 @@ import torch.nn as nn
 
 from util.tensor_util import pad_divide_by, unpad
 
+def cos_sim(A, B):
+    cos = nn.CosineSimilarity(dim = 1)
+    return cos(A,B)[0]
 
 class InferenceCore:
     def __init__(self, network:XMem, config):
@@ -41,10 +44,6 @@ class InferenceCore:
     def set_all_labels(self, all_labels):
         # self.all_labels = [l.item() for l in all_labels]
         self.all_labels = all_labels
-
-    def cos_sim(A, B):
-        cos = nn.CosineSimilarity(dim = 1)
-        return cos(A,B)[0]
 
     def step(self, image, mask=None, valid_labels=None, end=False):
 
@@ -108,7 +107,7 @@ class InferenceCore:
             if self.pre_value == None :
                 self.pre_value = value
             else :
-                print(f"cos_sim: ${self.cos_sim(self.pre_value, value)}")
+                print(f"cos_sim: ${cos_sim(self.pre_value, value)}")
 
             self.memory.add_memory(key, shrinkage, value, self.all_labels, 
                                     selection=selection if self.enable_long_term else None)
